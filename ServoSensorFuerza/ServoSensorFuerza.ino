@@ -31,36 +31,44 @@ unsigned long int millisAnterioresVolt = 0;
 
 void accionoServo(int signal) {
   unsigned long millisActuales = millis(); // Momento actual
-  /* Veo si el tiempo transcurrido aplica segun el intervalo tomado 
-   * para que el Servo cambie de estado 
-   */
+  /* Veo si el tiempo transcurrido aplica segun el intervalo tomado
+     para que el Servo cambie de estado
+  */
   if (millisActuales - millisAnteriores >= intervalo) {
-      millisAnteriores = millisActuales; // Guardo el estado actual como anterior para la proxima medicion
-      servo.write(signal);
-      posicion = signal;
+    millisAnteriores = millisActuales; // Guardo el estado actual como anterior para la proxima medicion
+    servo.write(signal);
+    posicion = signal;
   }
 }
 
-void muestroTension(float volts) {
+void muestroTension() {
 
   unsigned long millisActuales = millis(); // Momento actual
-  /* Veo si el tiempo transcurrido aplica segun el intervalo tomado 
-   * para que el Servo cambie de estado 
-   */
-  if (millisActuales - millisAnterioresVolt >= 1000) {
+  /* Veo si el tiempo transcurrido aplica segun el intervalo tomado
+     para que el Servo cambie de estado
+  */
+  if (millisActuales - millisAnterioresVolt >= 100) {
     millisAnterioresVolt = millisActuales;
-    if (volts == vEst && vForce != 0) {
+
+    int input = analogRead(A0);
+    float vOutput = input * (vArduino / 1023.0); // Se mapea la tension
+
+    // Formula para calcular la tension en un divisor de potencial:
+    // Vout = (R2 / (R1 + R2)) * Vin
+
+    // vInput: Tension de DC a medir
+    float vInput = vOutput / (r2 / (r1 + r2));
+
+
+    if (vInput == vEst && vForce != 0) {
       vForce = 0;
-      Serial.println("OK");
+      Serial.println("ESTACIONARIO (cerrado)");
     }
-    if (volts > vEst && vForce == 0) {
+    if (vInput > vEst && vForce == 0) {
       vForce = 1;
-      Serial.println("FORCE");
+      Serial.println("FORZADO");
     }
-    
-    //Serial.println(volts);
   }
- 
 }
 
 
@@ -85,16 +93,6 @@ void setup() {
 void loop() {
 
   accionoServo(posInicial);
+  muestroTension();
 
-  int input = analogRead(A0);
-  float vOutput = input * (vArduino / 1023.0); // Se mapea la tension
-
-  // Formula para calcular la tension en un divisor de potencial:
-  // Vout = (R2 / (R1 + R2)) * Vin
-
-  // vInput: Tension de DC a medir
-  float vInput = vOutput / (r2 / (r1 + r2));
-  
-  muestroTension(vInput);
-  
 }
