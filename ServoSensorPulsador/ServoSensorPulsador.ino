@@ -15,6 +15,11 @@ int posInicial = cerrado;
 int posAnterior;
 int posicion;
 
+// Historico de forzados
+unsigned int forzado = 0;
+unsigned int estacionario = 1;
+unsigned int estadoAnterior = estacionario;
+
 // VOLTIMETRO:
 float vArduino = 3.3; // Cuando esta alimentado por USB la salida de 5V solo llega a 3.3V
 float r1 = 100000; // valor en ohms de la primer resistencia
@@ -23,14 +28,15 @@ float r2 = 10000; // valor en ohms de la segunda resistencia
 // Tensiones del servo:
 // Pata PWM:
 float vEst = 0;
-float vForce = 1;
+float vForce = 0.4;
 
 // Timestamps
-const long intervaloServo = 15;
+const long intervaloServo = 20;
+const long intervaloVolt = 100;
 unsigned long int millisAnteriores = 0;
 unsigned long int millisAnterioresVolt = 0;
 
-void accionoServo(char signal) {
+void accionarServo(char signal) {
   unsigned long millisActuales = millis(); // Momento actual
   /* Veo si el tiempo transcurrido aplica segun el intervalo tomado
      para que el Servo cambie de estado
@@ -51,52 +57,47 @@ void accionoServo(char signal) {
   }
 }
 
-void muestroTension() {
+void verificarForzado() {
+
 
   unsigned long millisActuales = millis(); // Momento actual
   /* Veo si el tiempo transcurrido aplica segun el intervalo tomado
      para que el Servo cambie de estado
   */
-  if (millisActuales - millisAnterioresVolt >= 100) {
+  if (millisActuales - millisAnterioresVolt >= intervaloVolt) {
     millisAnterioresVolt = millisActuales;
 
-    int input = analogRead(A0);
-    float vOutput = input * (vArduino / 1023.0); // Se mapea la tension
+    int valorMedido = analogRead(A0);
 
-    // Formula para calcular la tension en un divisor de potencial:
-    // Vout = (R2 / (R1 + R2)) * Vin
+    // Convierto la lectura (de 0 a 1023) a voltaje (0 a 5V):
+    float voltajeMedido = valorMedido * (vArduino / 1023);
+    Serial.print("Voltaje medido: ");
+    // Imprimo el valor medido:
+    Serial.println(voltajeMedido);
 
-    // vInput: Tension de DC a medir
-    float vInput = vOutput / (r2 / (r1 + r2));
-
-    
-    if (vInput == vEst && posicion == cerrado && vForce != 0) {
-      vForce = 0;
-      Serial.print("Tension de puerta: ");
-      Serial.println("ESTACIONARIO (cerrado)");
-    }
-    if (vInput > vEst && posicion == cerrado && vForce == 0) {
-      vForce = 1;
-      Serial.print("Tension de puerta: ");
+    if (voltajeMedido > vEst &&  voltajeMedido <= vForce && forzado == 0) {
+      forzado = 1;
+      estadoAnterior = estacionario;
       Serial.println("FORZADO");
     }
-    if (vInput > vEst && posicion == abierto) {
-      vForce = 0;
-      Serial.println("ABIERTO");
+    else if (voltajeMedido == vEst &&  voltajeMedido < vForce && forzado == 1) {
+      forzado = 0;
+      estadoAnterior = forzado;
+      Serial.println("ESTACIONARIO");
     }
 
-//    if (vInput == vEst && vForce != 0) {
-//      vForce = 0;
-//      Serial.println("ESTACIONARIO (cerrado)");
-//    }
-//    if (vInput > vEst && vForce == 0) {
-//      vForce = 1;
-//      Serial.println("FORZADO");
-//    }
-//    if (vInput > vEst && vForce == 0) {
-//      vForce = 1;
-//      Serial.println("ABIERTO");
-//    }
+    //    if (vInput == vEst && vForce != 0) {
+    //      vForce = 0;
+    //      Serial.println("ESTACIONARIO (cerrado)");
+    //    }
+    //    if (vInput > vEst && vForce == 0) {
+    //      vForce = 1;
+    //      Serial.println("FORZADO");
+    //    }
+    //    if (vInput > vEst && vForce == 0) {
+    //      vForce = 1;
+    //      Serial.println("ABIERTO");
+    //    }
   }
 }
 
@@ -124,10 +125,10 @@ void loop() {
   if (Serial.available()) {
 
     char sigRecibida = Serial.read();
-    accionoServo(sigRecibida);
+    accionarServo(sigRecibida);
   }
 
   //accionoServo(posInicial);
-  muestroTension();
+  verificarForzado();
 
 }
