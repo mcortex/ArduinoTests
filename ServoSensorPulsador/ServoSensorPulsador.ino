@@ -30,15 +30,24 @@ const long intervaloServo = 15;
 unsigned long int millisAnteriores = 0;
 unsigned long int millisAnterioresVolt = 0;
 
-void accionoServo(int signal) {
+void accionoServo(char signal) {
   unsigned long millisActuales = millis(); // Momento actual
   /* Veo si el tiempo transcurrido aplica segun el intervalo tomado
      para que el Servo cambie de estado
   */
   if (millisActuales - millisAnteriores >= intervaloServo) {
     millisAnteriores = millisActuales; // Guardo el estado actual como anterior para la proxima medicion
-    servo.write(signal);
-    posicion = signal;
+
+    if (posicion == cerrado && signal == 'A') {
+      servo.write(abierto);
+      posicion = abierto;
+      Serial.println("ABIERTO");
+    }
+    else if (posicion == abierto && signal == 'A') {
+      servo.write(cerrado);
+      posicion = cerrado;
+      Serial.println("CERRADO");
+    }
   }
 }
 
@@ -60,15 +69,34 @@ void muestroTension() {
     // vInput: Tension de DC a medir
     float vInput = vOutput / (r2 / (r1 + r2));
 
-
-    if (vInput == vEst && vForce != 0) {
+    
+    if (vInput == vEst && posicion == cerrado && vForce != 0) {
       vForce = 0;
+      Serial.print("Tension de puerta: ");
       Serial.println("ESTACIONARIO (cerrado)");
     }
-    if (vInput > vEst && vForce == 0) {
+    if (vInput > vEst && posicion == cerrado && vForce == 0) {
       vForce = 1;
+      Serial.print("Tension de puerta: ");
       Serial.println("FORZADO");
     }
+    if (vInput > vEst && posicion == abierto) {
+      vForce = 0;
+      Serial.println("ABIERTO");
+    }
+
+//    if (vInput == vEst && vForce != 0) {
+//      vForce = 0;
+//      Serial.println("ESTACIONARIO (cerrado)");
+//    }
+//    if (vInput > vEst && vForce == 0) {
+//      vForce = 1;
+//      Serial.println("FORZADO");
+//    }
+//    if (vInput > vEst && vForce == 0) {
+//      vForce = 1;
+//      Serial.println("ABIERTO");
+//    }
   }
 }
 
@@ -80,38 +108,26 @@ void setup() {
 
   Serial.begin(9600);
 
-  Serial.println("--------------------");
-  Serial.println("VOLTIMETRO DC");
-  Serial.print((int)(vArduino / (r2 / (r1 + r2)))); // vMax: tension maxima que soporta
-  Serial.println("V");
-  Serial.println("--------------------");
-  Serial.println("");
-
   if (servo.read() != posInicial) {
-      servo.write(posInicial); // Si la puerta estaba abierta la cierro
-      posicion = posInicial;
-      delay(15); // Solo usamos delay aca ya que es solo una accion bloqueante de inicializacion
+    servo.write(posInicial); // Si la puerta estaba abierta la cierro
+    posicion = posInicial;
+
+    delay(intervaloServo); // Solo usamos delay aca ya que es solo una accion bloqueante de inicializacion
   }
 
-  delay(2000);
+  Serial.println(posicion);
 
 }
 
 void loop() {
 
-//  if (Serial.available()) {
-//
-//    char sigRecibida = Serial.read();
-//    
-//    if (sigRecibida == 'A' && posicion == cerrado) {
-//      accionoServo(abierto);
-//    }
-//    else if (sigRecibida == 'C' && posicion == abierto) {
-//      accionoServo(cerrado);
-//    }
-//  }
+  if (Serial.available()) {
 
-  accionoServo(posInicial);
+    char sigRecibida = Serial.read();
+    accionoServo(sigRecibida);
+  }
+
+  //accionoServo(posInicial);
   muestroTension();
 
 }
