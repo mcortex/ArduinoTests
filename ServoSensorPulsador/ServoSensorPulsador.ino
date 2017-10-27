@@ -27,12 +27,12 @@ float r2 = 10000; // valor en ohms de la segunda resistencia
 
 // Tensiones del servo:
 // Pata PWM:
-float vEst = 0;
-float vForce = 0.4;
+float vEst = 1.6613;
+float vForce = 1.7;
 
 // Timestamps
 const long intervaloServo = 20;
-const long intervaloVolt = 100;
+const long intervaloVolt = 20;
 unsigned long int millisAnteriores = 0;
 unsigned long int millisAnterioresVolt = 0;
 
@@ -70,17 +70,19 @@ void verificarForzado() {
     int valorMedido = analogRead(A0);
 
     // Convierto la lectura (de 0 a 1023) a voltaje (0 a 5V):
-    float voltajeMedido = valorMedido * (vArduino / 1023);
-    Serial.print("Voltaje medido: ");
-    // Imprimo el valor medido:
-    Serial.println(voltajeMedido);
+   float voltajeMedido = valorMedido * (vArduino / 1023);
+//    Serial.print("Voltaje medido: ");
+//    // Imprimo el valor medido:
+//    Serial.println(voltajeMedido,4);
 
-    if (voltajeMedido > vEst &&  voltajeMedido <= vForce && forzado == 0) {
+    if (voltajeMedido > vEst &&  voltajeMedido <= vForce && forzado == 0 ) {
+//    if (voltajeMedido > vEst &&  voltajeMedido <= vForce) {
       forzado = 1;
       estadoAnterior = estacionario;
       Serial.println("FORZADO");
     }
-    else if (voltajeMedido == vEst &&  voltajeMedido < vForce && forzado == 1) {
+    else 
+      if (voltajeMedido <= vEst &&  voltajeMedido < vForce && forzado == 1) {
       forzado = 0;
       estadoAnterior = forzado;
       Serial.println("ESTACIONARIO");
@@ -115,7 +117,7 @@ void setup() {
 
     delay(intervaloServo); // Solo usamos delay aca ya que es solo una accion bloqueante de inicializacion
   }
-
+  Serial.print("Inicializando servo, posicion incial CERRADO, angulo: ");
   Serial.println(posicion);
 
 }
